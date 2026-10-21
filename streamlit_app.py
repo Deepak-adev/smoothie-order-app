@@ -5,14 +5,14 @@ import requests
 from snowflake.snowpark.functions import col
 
 # App title
-st.title("🥤 Custom Smoothie Order")
-st.write("Create your smoothie and explore fruit nutrition!")
+st.title("🥤 Customize Your Smoothie! 🥤")
+st.write("Choose the fruits you want in your custom Smoothie!")
 
 # Connect to Snowflake
 cnx = st.connection("snowflake")
 session = cnx.session()
 
-# Load fruit names and API search terms
+# Load fruit options
 my_dataframe = session.table(
     "SMOOTHIES.PUBLIC.FRUIT_OPTIONS"
 ).select(
@@ -23,9 +23,12 @@ my_dataframe = session.table(
 pd_df = my_dataframe.to_pandas()
 
 # Customer name
-name_on_order = st.text_input("Name on smoothie order:")
+name_on_order = st.text_input("Name on Smoothie:")
 
-# Select fruits
+if name_on_order.strip():
+    st.write(f"The name on your Smoothie will be: {name_on_order.strip()}")
+
+# Choose up to five fruits
 fruit_list = pd_df["FRUIT_NAME"].tolist()
 
 ingredients_list = st.multiselect(
@@ -34,35 +37,27 @@ ingredients_list = st.multiselect(
     max_selections=5
 )
 
-# Build the order and fetch nutrition data
+# Fetch and display nutrition information for each selected fruit
 ingredients_string = ""
 
 if ingredients_list:
     for fruit_chosen in ingredients_list:
-        # Add the selected fruit to the order string
         ingredients_string += fruit_chosen
 
-        # Find the API search term for this fruit
-        search_on = pd_df.loc[
-            pd_df["FRUIT_NAME"] == fruit_chosen,
-            "SEARCH_ON"
-        ].iloc[0]
+        st.subheader(fruit_chosen + " Nutrition Information")
 
-        # Request data for the selected fruit
         try:
             smoothiefroot_response = requests.get(
                 "https://my.smoothiefroot.com/api/fruit/"
-                + requests.utils.quote(str(search_on), safe=""),
+                + requests.utils.quote(fruit_chosen, safe=""),
                 timeout=10
             )
 
             if smoothiefroot_response.status_code == 200:
-                # Convert API JSON to a DataFrame
                 sf_df = pd.json_normalize(
                     smoothiefroot_response.json()
                 )
 
-                st.write(f"Nutrition data for {fruit_chosen}")
                 st.dataframe(
                     sf_df,
                     use_container_width=True
@@ -70,24 +65,21 @@ if ingredients_list:
 
             elif smoothiefroot_response.status_code == 404:
                 st.info(
-                    f"No API data found for {fruit_chosen}. "
-                    "Try checking its SEARCH_ON value."
+                    "Sorry, that fruit is not in our database."
                 )
+
             else:
                 st.warning(
                     f"API returned HTTP "
-                    f"{smoothiefroot_response.status_code} "
-                    f"for {fruit_chosen}."
+                    f"{smoothiefroot_response.status_code}."
                 )
 
         except requests.RequestException as error:
-            st.warning(
-                f"Could not retrieve data for {fruit_chosen}: {error}"
-            )
+            st.warning(f"Could not retrieve fruit data: {error}")
 
     st.write("Your ingredients:", ", ".join(ingredients_list))
 
-# Submit the smoothie order
+# Submit smoothie order
 if st.button("Submit Order"):
     if not name_on_order.strip():
         st.warning("Please enter your name.")
@@ -108,7 +100,8 @@ if st.button("Submit Order"):
             ).collect()
 
             st.success(
-                f"Your smoothie is ordered, {name_on_order.strip()}!",
+                f"Your smoothie is ordered, "
+                f"{name_on_order.strip()}!",
                 icon="✅"
             )
 
