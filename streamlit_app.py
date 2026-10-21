@@ -49,7 +49,7 @@ ingredients_string = ""
 if ingredients_list:
     for fruit_chosen in ingredients_list:
         # Preserve the display name in the saved order
-        ingredients_string += fruit_chosen + " "
+        ingredients_string += fruit_chosen
 
         # Find the corresponding API search term
         search_on = pd_df.loc[
