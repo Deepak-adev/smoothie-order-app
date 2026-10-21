@@ -94,3 +94,12 @@ if st.button("Submit Order"):
             f"Your smoothie is ordered, {name_on_order.strip()}!",
             icon="✅"
         )
+
+
+# Test the SmoothieFroot API
+smoothiefroot_response = requests.get(
+    "https://my.smoothiefroot.com/api/fruit/watermelon"
+)
+
+st.text(smoothiefroot_response)
+
